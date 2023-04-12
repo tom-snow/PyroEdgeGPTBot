@@ -160,11 +160,11 @@ async def chat_handle(bot, update):
     logger.info(f"Receive text [{update.text}] from [{update.chat.id}]")
     # 调用 AI
     response = f"{BOT_NAME} is thinking..."
-    if RESPONSE_TYPE == "normal":
+    if EDGES[update.chat.id]["response"] == "normal":
         msg = await update.reply(text=response)
         response, reply_markup = await bingAI(update.chat.id, update.text)
         await msg.edit(text=response, reply_markup=reply_markup)
-    elif RESPONSE_TYPE == "stream":
+    elif EDGES[update.chat.id]["response"]  == "stream":
         msg = await update.reply(text=response)
         async for final, response, reply_markup in bingAIStream(update.chat.id, update.text):
             if final:
@@ -172,21 +172,25 @@ async def chat_handle(bot, update):
             else:
                 if response == "":
                     continue
-                await msg.edit(text=response)
+                try:
+                    await msg.edit(text=response)
+                except Exception as e: # 有时由于 API 返回数据问题，编辑前后消息内容一致，不做处理，只记录 warning
+                    logger.warning(f"Message editing error: {e}")
 
 # 处理 callback query
 @pyro.on_callback_query(is_allowed_filter())
 async def callback_query_handle(bot, query):
-    logger.info(f"Receive callback query [{query.data}] from [{query.from_user.id}]")
+    query_text = EDGES[query.from_user.id]["temp"].get(query.data)
+    logger.info(f"Receive callback query [{query.data}: {query_text}] from [{query.from_user.id}]")
     # 调用 AI
     response = f"{BOT_NAME} is thinking..."
-    if RESPONSE_TYPE == "normal":
+    if EDGES[query.from_user.id]["response"] == "normal":
         msg = await bot.send_message(chat_id=query.from_user.id, text=response)
-        response, reply_markup = await bingAI(query.from_user.id, query.data)
+        response, reply_markup = await bingAI(query.from_user.id, query_text)
         await msg.edit(text=response, reply_markup=reply_markup)
-    elif RESPONSE_TYPE == "stream":
+    elif EDGES[query.from_user.id]["response"] == "stream":
         msg = await bot.send_message(chat_id=query.from_user.id, text=response)
-        async for final, response, reply_markup in bingAIStream(query.from_user.id, query.data):
+        async for final, response, reply_markup in bingAIStream(query.from_user.id, query_text):
             if final:
                 await msg.edit(text=response, reply_markup=reply_markup)
             else:
@@ -203,7 +207,7 @@ async def bingAI(user_id, messageText):
     return response, msg_suggest
 
 async def bingAIStream(user_id, messageText):
-    last_time = time.time() - 3 # 第一次间隔调小
+    last_time = time.time() - 1.5 # 第一次间隔调小(有需要自行根据 EDGES[user_id]["interval"] 调整)
     async for final, rsp in  EDGES[user_id]["bot"].ask_stream(prompt=messageText, conversation_style=EDGES[user_id]["style"]):
         now_time = time.time()
         if final:
@@ -217,6 +221,8 @@ async def bingAIStream(user_id, messageText):
             last_time = now_time
             logger.info(f"BingAI stream response: {rsp}")
             response = re.sub(r'\[\^(\d+)\^\]', '', rsp)
+            if response.startswith("[1]: "): # 删除引用的消息链接, 避免消息闪动幅度过大
+                response = response.split("\n\n", 1)[1]
             yield final, response, ""
 
 def process_message_main(rsp_obj, user_id=None):
@@ -224,7 +230,7 @@ def process_message_main(rsp_obj, user_id=None):
 
     # 回复消息主文本部分
     bot_message = rsp_obj["item"]["messages"][1]
-    msg_main, msg_ref, msg_suggest = process_message_body(bot_message)
+    msg_main, msg_ref, msg_suggest = process_message_body(bot_message, user_id)
     throttlingMax = rsp_obj["item"]["throttling"]["maxNumUserMessagesInConversation"]
     throttlingUser = rsp_obj["item"]["throttling"]["numUserMessagesInConversation"]
     msg_throttling = f"Messages: {throttlingUser}/{throttlingMax}"
@@ -238,7 +244,7 @@ def process_message_main(rsp_obj, user_id=None):
     return response, msg_suggest
 
 
-def process_message_body(msg_obj):
+def process_message_body(msg_obj, user_id=None):
     # 回复消息的主体部分(先设置为空)
     msg_main = ""
     msg_ref = ""
@@ -268,12 +274,15 @@ def process_message_body(msg_obj):
     # 建议消息部分
     if "suggestedResponses" in msg_obj:
         suggested_count = len(msg_obj["suggestedResponses"])
-        if SUGGEST_MODE == "callbackquery":
+        if EDGES[user_id]["suggest"]  == "callbackquery":
             msg_suggest = InlineKeyboardMarkup([])
+            EDGES[user_id]["temp"] = {}
             for suggested_index in range(suggested_count):
                 suggested_text = msg_obj["suggestedResponses"][suggested_index]["text"]
-                msg_suggest.inline_keyboard.append([InlineKeyboardButton(suggested_text, callback_data=suggested_text)])
-        elif SUGGEST_MODE == "replykeyboard":
+                suggested_hash = str(hash(suggested_text)) # 使用 hash 值作为 data ，避免 data 过长报错
+                EDGES[user_id]["temp"][suggested_hash] = suggested_text
+                msg_suggest.inline_keyboard.append([InlineKeyboardButton(suggested_text, callback_data=suggested_hash)])
+        elif EDGES[user_id]["suggest"] == "replykeyboard":
             msg_suggest = ReplyKeyboardMarkup([])
             for suggested_index in range(suggested_count):
                 suggested_text = msg_obj["suggestedResponses"][suggested_index]["text"]

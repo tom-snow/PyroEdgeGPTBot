@@ -131,3 +131,4 @@ dmypy.json
 # Project special
 cookie.json
 *.session
+*.session-journal
