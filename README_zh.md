@@ -8,6 +8,14 @@ _在 Telegram 上使用 Bing AI ( 使用 [EdgeGPT](https://github.com/acheong08/
 
 </div>
 
+# 功能
+- [x] 多用户独享会话 (暂时不支持群内使用)
+- [x] 回复内容包含引用标号
+- [x] 以常规模式或者流模式回复
+- [ ] 支持 prompt
+- [ ] 图片生成 (等待上游修复)
+- [ ] 导出会话到 notion
+
 # 安装
 ## 依赖
 * python 3.8+

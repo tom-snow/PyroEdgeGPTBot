@@ -8,6 +8,14 @@ _A telegram bot with Bing AI ( using [EdgeGPT](https://github.com/acheong08/Edge
 
 </div>
 
+# Features
+- [x] Multiple users with different sessions (No group support now)
+- [x] Response with reference (and correct ref label)
+- [x] Response with normal and stream mode
+- [ ] Prompt Support
+- [ ] Image generation (wait upstream fix)
+- [ ] Export conversation to Notion
+
 # Setup
 ## Requirements
 * python 3.8+

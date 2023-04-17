@@ -4,3 +4,4 @@ python-dotenv>=1.0.0
 Pyrogram>=2.0
 EdgeGPT>=0.1.22
 tgcrypto
+aiohttp

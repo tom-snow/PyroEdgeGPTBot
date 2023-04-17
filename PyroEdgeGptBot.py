@@ -207,7 +207,7 @@ async def bingAI(user_id, messageText):
     return response, msg_suggest
 
 async def bingAIStream(user_id, messageText):
-    last_time = time.time() - 1.5 # 第一次间隔调小(有需要自行根据 EDGES[user_id]["interval"] 调整)
+    last_time = time.time() - 0.5 # 第一次间隔调小(有需要自行根据 EDGES[user_id]["interval"] 调整)
     async for final, rsp in  EDGES[user_id]["bot"].ask_stream(prompt=messageText, conversation_style=EDGES[user_id]["style"]):
         now_time = time.time()
         if final:
@@ -229,8 +229,19 @@ def process_message_main(rsp_obj, user_id=None):
     response = RESPONSE_TEMPLATE
 
     # 回复消息主文本部分
-    bot_message = rsp_obj["item"]["messages"][1]
-    msg_main, msg_ref, msg_suggest = process_message_body(bot_message, user_id)
+    if "messages" in rsp_obj["item"]:
+        bot_message = rsp_obj["item"]["messages"][1]
+        msg_main, msg_ref, msg_suggest = process_message_body(bot_message, user_id)
+    elif "result" in rsp_obj["item"]:
+        logger.warning(f"[process_message_main] BingAI result: {json.dumps(rsp_obj['item']['result'], ensure_ascii=False)}")
+        if rsp_obj["item"]["result"]["value"] == "InvalidSession":
+            response = "Invalid Session (may be session expired), please /reset chat"
+            return response, None
+    else:
+        logger.warning(f"[process_message_main] BingAI response: {json.dumps(rsp_obj, ensure_ascii=False)}")
+        response = "Something wrong. Please /reset chat"
+        return response, None
+        
     throttlingMax = rsp_obj["item"]["throttling"]["maxNumUserMessagesInConversation"]
     throttlingUser = rsp_obj["item"]["throttling"]["numUserMessagesInConversation"]
     msg_throttling = f"Messages: {throttlingUser}/{throttlingMax}"
@@ -242,7 +253,6 @@ def process_message_main(rsp_obj, user_id=None):
     else:
         response = response.format(msg_main=msg_main, msg_ref=msg_ref, msg_throttling=msg_throttling)
     return response, msg_suggest
-
 
 def process_message_body(msg_obj, user_id=None):
     # 回复消息的主体部分(先设置为空)
