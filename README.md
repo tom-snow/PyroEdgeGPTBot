@@ -46,7 +46,7 @@ _A telegram bot with Bing AI ( using [EdgeGPT](https://github.com/acheong08/Edge
 
   </summary>
 
-- Install the cookie editor extension for [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm) or [Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/)
+- Install the cookie editor extension for [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm) or [Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/) or [Edge](https://microsoftedge.microsoft.com/addons/detail/cookieeditor/neaplmfkghagebokkhpjpoebhdledlfi)
 - Go to [`bing.com`](https://bing.com/)
 - Open the extension
 - Click "Export" on the bottom right, then "Export as JSON" (This saves your cookies to clipboard)
