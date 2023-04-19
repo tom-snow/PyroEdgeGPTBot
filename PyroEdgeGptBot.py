@@ -182,6 +182,10 @@ async def chat_handle(bot, update):
 async def callback_query_handle(bot, query):
     query_text = EDGES[query.from_user.id]["temp"].get(query.data)
     logger.info(f"Receive callback query [{query.data}: {query_text}] from [{query.from_user.id}]")
+    if query_text is None:
+        # 重启 bot 后会丢失之前存储的 callback query 对应信息，暂时返回报错让用户手动发消息（后续将 callback query 存储在数据库中，而不是内存）
+        await bot.send_message(chat_id=query.from_user.id, text="Sorry, the callback query is not found.(May be you have restarted the bot before.)")
+        return
     # 调用 AI
     response = f"{BOT_NAME} is thinking..."
     if EDGES[query.from_user.id]["response"] == "normal":
@@ -235,11 +239,19 @@ def process_message_main(rsp_obj, user_id=None):
     elif "result" in rsp_obj["item"]:
         logger.warning(f"[process_message_main] BingAI result: {json.dumps(rsp_obj['item']['result'], ensure_ascii=False)}")
         if rsp_obj["item"]["result"]["value"] == "InvalidSession":
-            response = "Invalid Session (may be session expired), please /reset chat"
+            response = "Invalid Session (may be session expired), Please /reset the chat"
+            return response, None
+        elif rsp_obj["item"]["result"]["value"] == "Throttled":
+            response = "Request is throttled (You request may contain sensitive content), Please /reset the chat"
+            return response, None
+        else:
+            if "message" in rsp_obj["item"]["result"]:
+                response = rsp_obj["item"]["result"]["message"] + "Please /reset the chat"
+            response = "Something wrong. Please /reset the chat"
             return response, None
     else:
         logger.warning(f"[process_message_main] BingAI response: {json.dumps(rsp_obj, ensure_ascii=False)}")
-        response = "Something wrong. Please /reset chat"
+        response = "Something wrong. Please /reset the chat"
         return response, None
         
     throttlingMax = rsp_obj["item"]["throttling"]["maxNumUserMessagesInConversation"]
@@ -249,7 +261,7 @@ def process_message_main(rsp_obj, user_id=None):
         asyncio.run(EDGES[user_id]["bot"].reset())
         msg_throttling += "\nNote: Conversation is over, and I auto reset it successfully."
     if msg_main == "":
-        response = "Something wrong. Please /reset chat" # default response
+        response = "Something wrong. Please /reset the chat" # default response
     else:
         response = response.format(msg_main=msg_main, msg_ref=msg_ref, msg_throttling=msg_throttling)
     return response, msg_suggest
