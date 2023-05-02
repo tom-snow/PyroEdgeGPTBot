@@ -13,7 +13,7 @@ _在 Telegram 上使用 Bing AI ( 使用 [EdgeGPT](https://github.com/acheong08/
 - [x] 回复内容包含引用标号
 - [x] 以常规模式或者流模式回复
 - [ ] 支持 prompt
-- [ ] 图片生成 (等待上游修复)
+- [x] 图片生成 (inline query 与命令模式)
 - [ ] 导出会话到 notion
 
 # 安装
@@ -98,6 +98,7 @@ new - 新会话
 switch - 切换聊天模式
 interval - 设置修改消息间隔
 suggest_mode - 建议消息模式
+image_gen - 图片生成
 ```
 
 </details>

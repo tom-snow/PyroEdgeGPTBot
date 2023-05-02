@@ -132,3 +132,4 @@ dmypy.json
 cookie.json
 *.session
 *.session-journal
+/logs/*.log

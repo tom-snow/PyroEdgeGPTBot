@@ -1,12 +1,22 @@
 # -*- coding: utf-8 -*-
+
 import re
 import json
 import time
 import logging
 import asyncio
+import contextlib
+
+# import py3langid as langid
+from logging.handlers import TimedRotatingFileHandler
+from datetime import datetime
+
+from BingImageCreator import ImageGenAsync
 
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, \
+    ReplyKeyboardRemove, InlineQueryResultPhoto, InlineQueryResultArticle, InputTextMessageContent, \
+    InputMediaPhoto
 from EdgeGPT import Chatbot, ConversationStyle
 
 from config import API_ID, API_KEY, BOT_TOKEN, ALLOWED_USER_IDS, COOKIE_FILE, NOT_ALLOW_INFO, \
@@ -18,12 +28,38 @@ RESPONSE_TEMPLATE = """{msg_main}
 {msg_throttling}
 """
 
+IMAGE_GEN_COOKIE_U = ""
+with contextlib.suppress(Exception):
+    with open(COOKIE_FILE, encoding="utf-8") as file:
+        cookie_json = json.load(file)
+        for cookie in cookie_json:
+            if cookie.get("name") == "_U":
+                IMAGE_GEN_COOKIE_U = cookie.get("value")
+                break
+
 # 设置日志记录级别和格式，创建 logger
 logging.basicConfig(
     level=LOG_LEVEL.upper(),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__file__)
+
+file_handler = TimedRotatingFileHandler(
+    "logs/" + __file__.split(".")[0] + ".log", 
+    when="MIDNIGHT", 
+    interval=1, 
+    backupCount=7 # 保留 7 天备份
+)
+# file_handler.suffix = '%Y-%m-%d.log'
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+file_handler.setLevel(logging.DEBUG) # 将文件日志记录级别设置为 DEBUG
+
+# 创建流处理器
+stream_handler = logging.StreamHandler()
+
+# 将处理器添加到日志记录器中
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
 
 def check_conversation_style(style):
     if style in ConversationStyle.__members__:
@@ -50,18 +86,19 @@ pyro = Client("PyroEdgeGpt", api_id=API_ID, api_hash=API_KEY, bot_token=BOT_TOKE
 EDGES = {}
 for user_id in ALLOWED_USER_IDS:
     EDGES[user_id] = {
-        "bot": Chatbot(cookiePath=COOKIE_FILE), # 共用一个 cookie.json 文件
+        "bot": Chatbot(cookie_path=COOKIE_FILE), # 共用一个 cookie.json 文件
         "style": ConversationStyle[DEFAULT_CONVERSATION_STYLE_TYPE],
         "response": RESPONSE_TYPE,
         "interval": STREAM_INTERVAL,
         "suggest": SUGGEST_MODE,
-        "temp": {}
+        "temp": {},
+        "images": {}
     }
 
 # 创建自定义过滤器来判断用户是否拥有机器人访问权限
 def is_allowed_filter():
-    async def func(_, __, query):
-        return int(query.from_user.id) in ALLOWED_USER_IDS
+    async def func(_, __, update):
+        return int(update.from_user.id) in ALLOWED_USER_IDS
     return filters.create(func)
 
 # start 命令提示信息
@@ -154,6 +191,53 @@ async def set_suggest_mode_handle(bot, update):
     reply_text = f"Available arguments: `callbackquery`, `replykeyboard`, `copytext`"
     await bot.send_message(chat_id=update.chat.id, text=reply_text)
 
+def can_image_gen():
+    async def funcc(_, __, update):
+        return IMAGE_GEN_COOKIE_U != ""
+    return filters.create(funcc)
+# 图片生成
+@pyro.on_message(filters.command("image_gen") & filters.private & filters.chat(ALLOWED_USER_IDS) & can_image_gen())
+async def set_suggest_mode_handle(bot, update):
+    logger.info(f"Receive commands [{update.command}] from [{update.chat.id}]")
+    if len(update.command) > 1:
+        chat_id = update.chat.id
+        placeholder0 = "AgACAgQAAxkBAAMIZFFEWtUdu7y7O0W02C0dI7Q50xYAArS6MRuV0YFSDLuenqIQy8gACAEAAwIAA3gABx4E" # assets/placeholder0.png
+        placeholder1 = "AgACAgQAAxkBAAMJZFFEjKiGPDzKAqGm8jUGXXxXqWIAAhu7MRtskYlScm9aBotskTgACAEAAwIAA3gABx4E" # assets/placeholder1.png
+        placeholder2 = "AgACAgQAAxkBAAMKZFFEsD-xr4r89Jm10Dg-2GK6pdIAAhy7MRtskYlSeYXuodobO3YACAEAAwIAA3gABx4E" # assets/placeholder2.png
+        placeholder3 = "AgACAgQAAxkBAAMLZFFEzEhkfH2kM-Gyx-5j8KrG5YgAAh27MRtskYlSKctsbQ4wl14ACAEAAwIAA3gABx4E" # assets/placeholder3.png
+        prompt = update.command[1]
+        caption = f"ImageGenerator\nImage is generating, this is a placeholder image.\n\nUsing Prompt: {prompt}"
+        try:
+            msgs = await bot.send_media_group(chat_id, [
+                InputMediaPhoto(placeholder0, caption=caption),
+                InputMediaPhoto(placeholder1, caption=caption),
+                InputMediaPhoto(placeholder2, caption=caption),
+                InputMediaPhoto(placeholder3, caption=caption)
+            ])
+        except Exception as e:
+            logger.warning(f"ImageGenerator Send Default Placeholder Image Warn: {e}")
+            msgs = await bot.send_media_group(chat_id, [
+                InputMediaPhoto("assets/placeholder0.png", caption=caption),
+                InputMediaPhoto("assets/placeholder1.png", caption=caption),
+                InputMediaPhoto("assets/placeholder2.png", caption=caption),
+                InputMediaPhoto("assets/placeholder3.png", caption=caption),
+            ])
+
+        try:
+            images = await image_gen_main(prompt)
+            caption = f"ImageGenerator\nImage is generated.\n\nUsing Prompt: {prompt}"
+            for i in range(len(msgs)):
+                msg_chat_id = msgs[i].chat.id
+                msg_id = msgs[i].id
+                await bot.edit_message_media(msg_chat_id, msg_id, InputMediaPhoto(images[i], caption=caption))
+            logger.info(f"ImageGenerator Successfully, chat_id: {chat_id}, images: {images}")
+            return
+        except Exception as e:
+            logger.error(f"ImageGenerator Error: {e}")
+            await bot.send_message(chat_id=chat_id, text=f"ImageGenerator Error: {e}.\n\nImageGenerator Usage: `/image_gen &lt;prompt>`")
+            return
+    await update.reply(text="ImageGenerator Usage: `/image_gen &lt;prompt>`")
+
 # 处理文字对话
 @pyro.on_message(filters.text & filters.private & filters.chat(ALLOWED_USER_IDS))
 async def chat_handle(bot, update):
@@ -201,6 +285,166 @@ async def callback_query_handle(bot, query):
                 if response == "":
                     continue
                 await msg.edit(text=response)
+
+
+def is_image_gen_query_filter():
+    async def funcg(_, __, update):
+        if update.query.startswith("g"):
+            return IMAGE_GEN_COOKIE_U != ""
+        return False
+    return filters.create(funcg)
+
+@pyro.on_inline_query(is_allowed_filter() & is_image_gen_query_filter())
+async def inline_query_image_gen_handle(bot, update):
+    """
+    You should enable 'Inline Mode' and set 'Inline Feedback' to '100%' (10% may works well too) at @BotFather.
+    你应该在 @BotFather 上启用 'Inline Mode' 并设置 'Inline Feedback' 为 '100%' (10% 或许也能较好工作)
+    """
+    tmp = update.query.split(" ", 1)
+    prompt = ""
+    if len(tmp) >= 2:
+        prompt = tmp[1].strip()
+    logger.info(f"Receive inline_query image_gen result [{prompt}] from [{update.from_user.id}]")
+
+    if prompt == "": # 如果没有输入 prompt 返回使用说明提示
+        await update.answer(
+            results=[
+                InlineQueryResultArticle(
+                    title="ImageGenerator",
+                    input_message_content=InputTextMessageContent(
+                        "No prompt provide!\n\nUsage: Use `@BotName g &lt;prompt> %` to generate image. (Tips: If it take long time (25s) no response, you can add a '%' and delete it to refresh)"
+                    ),
+                    description="Input a prompt to generate an Image",
+                )
+            ],
+            cache_time=1
+        )
+        return
+    
+    img = -1
+    while True:
+        if prompt.endswith("%"):
+            prompt = prompt[:-1].strip()
+            img += 1
+        else:
+            break
+
+    # lang = langid.classify(prompt)[0] # 语言判断，现在 Bing AI 已经支持中文，暂时不做判断，其他语言不清楚
+
+    if img == -1: # 如果没有输入 prompt 终止符,则返回提示
+        await update.answer(
+            results=[
+                InlineQueryResultArticle(
+                    title="Prompt: " + prompt + "(Add '%' at the end of prompt to generate image)",
+                    description="Tips: If it take long time (25s) no response, you can add a '%' and delete it to refresh",
+                    input_message_content=InputTextMessageContent(
+                        "Please add '%' at the end of prompt to confirm the prompt. Add more (Max: 4) '%' to select next image. (Tips: If it take long time (25s) no response, you can add a '%' and delete it to refresh)"
+                    )
+                )
+            ]
+        )
+        return
+    try:
+        prompt_hash = str(hash(prompt))
+        if EDGES[update.from_user.id]["images"].get(prompt_hash) is not None:
+            images = EDGES[update.from_user.id]["images"].get(prompt_hash)
+        else:
+            images = await image_gen_main(prompt) # 获取图片并缓存
+            EDGES[update.from_user.id]["images"] = {}
+            EDGES[update.from_user.id]["images"][prompt_hash] = images
+
+        if img >= len(images):
+            img = len(images) - 1
+        img_url = images[img]
+
+        await update.answer(
+            results=[
+                InlineQueryResultPhoto(
+                    title="ImageGeneration Prompt: " + prompt,
+                    description="Add more '%' at the end of prompt to select next image",
+                    photo_url=img_url,
+                    caption=f"This Image is generated by Bing AI with prompt: {prompt}",
+                )
+            ],
+            cache_time=1
+        )
+    except Exception as e:
+        logger.error(f"Image generation error: {e}")
+        await update.answer(
+            results=[
+                InlineQueryResultArticle(
+                    title="[ERROR] Prompt: " + prompt,
+                    description=e.__str__(),
+                    input_message_content=InputTextMessageContent(
+                        f"Something went wrong.\n\nError message: {e.__str__()}\n\nYour Prompt: {prompt}"
+                    )
+                )
+            ]
+        )
+
+
+def is_prompt_select_filter():
+    async def funcp(_, __, update):
+        return update.query.startswith("p")
+    return filters.create(funcp)
+
+@pyro.on_inline_query(is_allowed_filter() & is_prompt_select_filter())
+async def inline_query_prompt_select_handle(bot, update):
+    """
+    You should enable 'Inline Mode' and set 'Inline Feedback' to '100%' (10% may works well too) at @BotFather.
+    你应该在 @BotFather 上启用 'Inline Mode' 并设置 'Inline Feedback' 为 '100%' (10% 或许也能较好工作)
+    """
+    tmp = update.query.split(" ", 1)
+    query = ""
+    if len(tmp) >= 2:
+        query = tmp[1]
+    logger.info(f"Receive inline_query prompt select result [{query}] from [{update.from_user.id}]")
+    await update.answer(
+        results=[
+            InlineQueryResultArticle(
+                title="PromptSelector",
+                input_message_content=InputTextMessageContent(
+                    "[Not Supported Yet]Use `@BotName p &lt;query>` to select Prompt. You should use this to send message to AI bot."
+                ),
+                description="[Not Supported Yet]Click me to show usage of PromptSelector",
+            )
+        ],
+        cache_time=1
+    )
+
+def is_default_inline_filter():
+    async def funcd(_, __, update):
+        return not update.query.startswith("p") and not update.query.startswith("g")
+    return filters.create(funcd)
+
+@pyro.on_inline_query(is_allowed_filter() & is_default_inline_filter())
+async def inline_query_default_handle(bot, update):
+    """
+    You should enable 'Inline Mode' and set 'Inline Feedback' to '100%' (10% may works well too) at @BotFather.
+    你应该在 @BotFather 上启用 'Inline Mode' 并设置 'Inline Feedback' 为 '100%' (10% 或许也能较好工作)
+    """
+    logger.info(f"Receive default result [{update.query}] from [{update.from_user.id}]")
+    await update.answer(
+        results=[
+            InlineQueryResultArticle(
+                title="ImageGenerator",
+                input_message_content=InputTextMessageContent(
+                    # "Usage: Use `@BotName g &lt;prompt>` to generate image. Prompt should be in English, If prompt is not in English, it will automatically use AI to translate prompt to English."
+                    "Usage: Use `@BotName g &lt;prompt>` to generate image. (Tips: If it take long time (25s) no response, you can add a '%' and delete it to refresh)"
+                ),
+                description="Click me to show usage of ImageGenerator",
+            ),
+            InlineQueryResultArticle(
+                title="PromptSelector",
+                input_message_content=InputTextMessageContent(
+                    "[Not Supported Yet]Use `@BotName p &lt;query>` to select Prompt. You should use this to send message to AI bot."
+                ),
+                description="[Not Supported Yet]Click me to show usage of PromptSelector",
+            )
+        ],
+        cache_time=1
+    )
+
 
 async def bingAI(user_id, messageText):
     rsp = await EDGES[user_id]["bot"].ask(prompt=messageText, conversation_style=EDGES[user_id]["style"])
@@ -316,6 +560,11 @@ def process_message_body(msg_obj, user_id=None):
                 msg_ref += f"{suggested_index + 1}. `{suggested_text}`\n"
 
     return msg_main, msg_ref, msg_suggest
+
+async def image_gen_main(prompt):
+    async with ImageGenAsync(IMAGE_GEN_COOKIE_U) as image_generator:
+        images = await image_generator.get_images(prompt)
+        return images
 
 
 pyro.run()
