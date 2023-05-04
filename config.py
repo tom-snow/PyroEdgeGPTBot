@@ -20,4 +20,5 @@ RESPONSE_TYPE = env.get('RESPONSE_TYPE') or os.environ.get('RESPONSE_TYPE') or "
 STREAM_INTERVAL = env.get('STREAM_INTERVAL') or os.environ.get('STREAM_INTERVAL') or 5
 STREAM_INTERVAL = int(STREAM_INTERVAL)
 LOG_LEVEL = env.get('LOG_LEVEL') or os.environ.get('LOG_LEVEL') or "INFO"
+LOG_TIMEZONE = env.get('LOG_TIMEZONE') or os.environ.get('LOG_TIMEZONE') or "Asia/Shanghai"
 

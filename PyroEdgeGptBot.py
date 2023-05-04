@@ -3,6 +3,7 @@
 import re
 import json
 import time
+import pytz
 import logging
 import asyncio
 import contextlib
@@ -20,7 +21,8 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyb
 from EdgeGPT import Chatbot, ConversationStyle
 
 from config import API_ID, API_KEY, BOT_TOKEN, ALLOWED_USER_IDS, COOKIE_FILE, NOT_ALLOW_INFO, \
-    BOT_NAME, SUGGEST_MODE, DEFAULT_CONVERSATION_STYLE_TYPE, RESPONSE_TYPE, STREAM_INTERVAL, LOG_LEVEL
+    BOT_NAME, SUGGEST_MODE, DEFAULT_CONVERSATION_STYLE_TYPE, RESPONSE_TYPE, STREAM_INTERVAL, \
+    LOG_LEVEL, LOG_TIMEZONE
 
 RESPONSE_TEMPLATE = """{msg_main}
 {msg_ref}
@@ -38,28 +40,37 @@ with contextlib.suppress(Exception):
                 break
 
 # 设置日志记录级别和格式，创建 logger
-logging.basicConfig(
-    level=LOG_LEVEL.upper(),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__file__)
+class MyFormatter(logging.Formatter):
+    def formatTime(self, record, datefmt=None):
+        dt = datetime.fromtimestamp(record.created, tz=pytz.timezone(LOG_TIMEZONE))
+        if datefmt:
+            return dt.strftime(datefmt)
+        else:
+            return dt.isoformat()
 
+myformatter = MyFormatter(fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+# 配置日志文件 
+# 注意，每日创建日志文件所用的时区是系统本地时区，不受 LOG_TIMEZONE 的影响，想使用 LOG_TIMEZONE 的时区需要安装并使用 TimezoneAwareTimedRotatingFileHandler 库
 file_handler = TimedRotatingFileHandler(
     "logs/" + __file__.split(".")[0] + ".log", 
     when="MIDNIGHT", 
     interval=1, 
     backupCount=7 # 保留 7 天备份
 )
-# file_handler.suffix = '%Y-%m-%d.log'
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+file_handler.suffix = '%Y-%m-%d.log'
+file_handler.setFormatter(myformatter)
 file_handler.setLevel(logging.DEBUG) # 将文件日志记录级别设置为 DEBUG
+# 配置屏幕日志
+screen_handler = logging.StreamHandler()
+screen_handler.setFormatter(myformatter)
+screen_handler.setLevel(LOG_LEVEL.upper())
 
-# 创建流处理器
-stream_handler = logging.StreamHandler()
+logging.basicConfig(
+    level=LOG_LEVEL.upper(),
+    handlers=[file_handler, screen_handler]
+)
+logger = logging.getLogger()
 
-# 将处理器添加到日志记录器中
-logger.addHandler(file_handler)
-logger.addHandler(stream_handler)
 
 def check_conversation_style(style):
     if style in ConversationStyle.__members__:
@@ -105,19 +116,19 @@ def is_allowed_filter():
 @pyro.on_message(filters.command("start") & filters.private)
 async def start_handle(bot, update):
     logger.info(f"Receive commands [{update.command}] from [{update.chat.id}]")
+    github_link = "https://github.com/tom-snow/PyroEdgeGPTBot"
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Star me on Github", url=github_link)],
+    ])
     # 不允许使用的用户返回不允许使用提示
     if int(update.chat.id) not in ALLOWED_USER_IDS:
         not_allow_info = NOT_ALLOW_INFO.strip()
         if len(not_allow_info.strip()) == 0:
             return
         not_allow_info = not_allow_info.replace("%user_id%", str(update.chat.id))
-        await bot.send_message(chat_id=update.chat.id, text=not_allow_info)
+        await bot.send_message(chat_id=update.chat.id, text=not_allow_info, reply_markup=keyboard)
         return
     # 返回欢迎消息
-    github_link = "https://github.com/tom-snow/PyroEdgeGPTBot"
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Star me on Github", url=github_link)],
-    ])
     await bot.send_message(chat_id=update.chat.id, text=f"Hello, I'm {BOT_NAME}.", reply_markup=keyboard)
 
 # help 命令提示信息
