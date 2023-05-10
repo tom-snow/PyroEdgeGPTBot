@@ -10,7 +10,7 @@ import contextlib
 
 # import py3langid as langid
 from logging.handlers import TimedRotatingFileHandler
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from BingImageCreator import ImageGenAsync
 
@@ -49,13 +49,16 @@ class MyFormatter(logging.Formatter):
             return dt.isoformat()
 
 myformatter = MyFormatter(fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-# 配置日志文件 
-# 注意，每日创建日志文件所用的时区是系统本地时区，不受 LOG_TIMEZONE 的影响，想使用 LOG_TIMEZONE 的时区需要安装并使用 TimezoneAwareTimedRotatingFileHandler 库
+# 配置日志文件，使用 utc=True 和 atTime=attime 根据时区设置日志文件(未测试)
+offset_seconds = datetime.now(pytz.timezone(LOG_TIMEZONE)).utcoffset().total_seconds()
+attime = (datetime(1, 1, 1) + timedelta(seconds=offset_seconds)).time()
 file_handler = TimedRotatingFileHandler(
-    "logs/" + __file__.split(".")[0] + ".log", 
+    "logs/" + __file__.split("/")[-1].split(".")[0] + ".log", 
     when="MIDNIGHT", 
     interval=1, 
-    backupCount=7 # 保留 7 天备份
+    backupCount=7, # 保留 7 天备份
+    utc=True,
+    atTime=attime
 )
 file_handler.suffix = '%Y-%m-%d.log'
 file_handler.setFormatter(myformatter)
@@ -97,7 +100,7 @@ pyro = Client("PyroEdgeGpt", api_id=API_ID, api_hash=API_KEY, bot_token=BOT_TOKE
 EDGES = {}
 for user_id in ALLOWED_USER_IDS:
     EDGES[user_id] = {
-        "bot": Chatbot(cookie_path=COOKIE_FILE), # 共用一个 cookie.json 文件
+        "bot": Chatbot.create(cookie_path=COOKIE_FILE), # 共用一个 cookie.json 文件
         "style": ConversationStyle[DEFAULT_CONVERSATION_STYLE_TYPE],
         "response": RESPONSE_TYPE,
         "interval": STREAM_INTERVAL,
@@ -255,22 +258,26 @@ async def chat_handle(bot, update):
     logger.info(f"Receive text [{update.text}] from [{update.chat.id}]")
     # 调用 AI
     response = f"{BOT_NAME} is thinking..."
+    msg = await update.reply(text=response)
     if EDGES[update.chat.id]["response"] == "normal":
-        msg = await update.reply(text=response)
         response, reply_markup = await bingAI(update.chat.id, update.text)
         await msg.edit(text=response, reply_markup=reply_markup)
     elif EDGES[update.chat.id]["response"]  == "stream":
-        msg = await update.reply(text=response)
-        async for final, response, reply_markup in bingAIStream(update.chat.id, update.text):
-            if final:
-                await msg.edit(text=response, reply_markup=reply_markup)
-            else:
-                if response == "":
-                    continue
-                try:
-                    await msg.edit(text=response)
-                except Exception as e: # 有时由于 API 返回数据问题，编辑前后消息内容一致，不做处理，只记录 warning
-                    logger.warning(f"Message editing error: {e}")
+        try:
+            async for final, response, reply_markup in bingAIStream(update.chat.id, update.text):
+                if final:
+                    await msg.edit(text=response, reply_markup=reply_markup)
+                else:
+                    if response == "":
+                        continue
+                    try:
+                        await msg.edit(text=response)
+                    except Exception as e: # 有时由于 API 返回数据问题，编辑前后消息内容一致，不做处理，只记录 warning
+                        logger.warning(f"Message editing error: {e}")
+        except Exception as e:
+            logger.error(f"[chat_handle, unexpected error]: {e}")
+            await msg.edit(text="Something went wrong, please check the logs.")
+            raise e
 
 # 处理 callback query
 @pyro.on_callback_query(is_allowed_filter())
@@ -283,19 +290,23 @@ async def callback_query_handle(bot, query):
         return
     # 调用 AI
     response = f"{BOT_NAME} is thinking..."
+    msg = await bot.send_message(chat_id=query.from_user.id, text=response)
     if EDGES[query.from_user.id]["response"] == "normal":
-        msg = await bot.send_message(chat_id=query.from_user.id, text=response)
         response, reply_markup = await bingAI(query.from_user.id, query_text)
         await msg.edit(text=response, reply_markup=reply_markup)
     elif EDGES[query.from_user.id]["response"] == "stream":
-        msg = await bot.send_message(chat_id=query.from_user.id, text=response)
-        async for final, response, reply_markup in bingAIStream(query.from_user.id, query_text):
-            if final:
-                await msg.edit(text=response, reply_markup=reply_markup)
-            else:
-                if response == "":
-                    continue
-                await msg.edit(text=response)
+        try:
+            async for final, response, reply_markup in bingAIStream(query.from_user.id, query_text):
+                if final:
+                    await msg.edit(text=response, reply_markup=reply_markup)
+                else:
+                    if response == "":
+                        continue
+                    await msg.edit(text=response)
+        except Exception as e:
+            logger.error(f"[callback_query_handle, unexpected error]: {e}")
+            await msg.edit(text="Something went wrong, please check the logs.")
+            raise e
 
 
 def is_image_gen_query_filter():
