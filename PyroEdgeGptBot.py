@@ -10,7 +10,8 @@ import contextlib
 
 # import py3langid as langid
 from logging.handlers import TimedRotatingFileHandler
-from datetime import datetime, timedelta
+from datetime import datetime
+from datetime import time as datetime_time
 
 from BingImageCreator import ImageGenAsync
 
@@ -49,16 +50,17 @@ class MyFormatter(logging.Formatter):
             return dt.isoformat()
 
 myformatter = MyFormatter(fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-# 配置日志文件，使用 utc=True 和 atTime=attime 根据时区设置日志文件(未测试)
-offset_seconds = datetime.now(pytz.timezone(LOG_TIMEZONE)).utcoffset().total_seconds()
-attime = (datetime(1, 1, 1) + timedelta(seconds=offset_seconds)).time()
+# 配置日志文件，使用 utc=True 和 atTime=atTime 根据时区设置日志文件(thanks for Bing AI)
+dt = datetime.now(pytz.timezone(LOG_TIMEZONE))
+utc_offset = dt.utcoffset()
+atTime = (datetime.combine(dt, datetime_time(0)) - utc_offset).time()
 file_handler = TimedRotatingFileHandler(
     "logs/" + __file__.split("/")[-1].split(".")[0] + ".log", 
     when="MIDNIGHT", 
     interval=1, 
     backupCount=7, # 保留 7 天备份
     utc=True,
-    atTime=attime
+    atTime=atTime
 )
 file_handler.suffix = '%Y-%m-%d.log'
 file_handler.setFormatter(myformatter)
@@ -241,10 +243,14 @@ async def set_suggest_mode_handle(bot, update):
         try:
             images = await image_gen_main(prompt)
             caption = f"ImageGenerator\nImage is generated.\n\nUsing Prompt: {prompt}"
+            images_count = len(images)
             for i in range(len(msgs)):
                 msg_chat_id = msgs[i].chat.id
                 msg_id = msgs[i].id
-                await bot.edit_message_media(msg_chat_id, msg_id, InputMediaPhoto(images[i], caption=caption))
+                if i < images_count:
+                    await bot.edit_message_media(msg_chat_id, msg_id, InputMediaPhoto(images[i], caption=caption))
+                else:
+                    await msgs[i].delete()
             logger.info(f"ImageGenerator Successfully, chat_id: {chat_id}, images: {images}")
             return
         except Exception as e:
