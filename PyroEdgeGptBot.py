@@ -98,9 +98,10 @@ pyro = Client("PyroEdgeGpt", api_id=API_ID, api_hash=API_KEY, bot_token=BOT_TOKE
 
 # 初始化 bing AI 会话字典(存储格式 key: user_id, value: edge_bot_config)
 EDGES = {}
+tmpLoop = asyncio.get_event_loop()
 for user_id in ALLOWED_USER_IDS:
     EDGES[user_id] = {
-        "bot": Chatbot.create(cookie_path=COOKIE_FILE), # 共用一个 cookie.json 文件
+        "bot": tmpLoop.run_until_complete(Chatbot.create(cookie_path=COOKIE_FILE)), # 共用一个 cookie.json 文件
         "style": ConversationStyle[DEFAULT_CONVERSATION_STYLE_TYPE],
         "response": RESPONSE_TYPE,
         "interval": STREAM_INTERVAL,
