@@ -55,7 +55,7 @@ dt = datetime.now(pytz.timezone(LOG_TIMEZONE))
 utc_offset = dt.utcoffset()
 atTime = (datetime.combine(dt, datetime_time(0)) - utc_offset).time()
 file_handler = TimedRotatingFileHandler(
-    "logs/" + __file__.split("/")[-1].split(".")[0] + ".log", 
+    "logs/" + __file__.split("/")[-1].split("\\")[-1].split(".")[0] + ".log", 
     when="MIDNIGHT", 
     interval=1, 
     backupCount=7, # 保留 7 天备份
