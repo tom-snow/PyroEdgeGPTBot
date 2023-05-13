@@ -222,7 +222,7 @@ async def set_suggest_mode_handle(bot, update):
         placeholder1 = "AgACAgQAAxkBAAMJZFFEjKiGPDzKAqGm8jUGXXxXqWIAAhu7MRtskYlScm9aBotskTgACAEAAwIAA3gABx4E" # assets/placeholder1.png
         placeholder2 = "AgACAgQAAxkBAAMKZFFEsD-xr4r89Jm10Dg-2GK6pdIAAhy7MRtskYlSeYXuodobO3YACAEAAwIAA3gABx4E" # assets/placeholder2.png
         placeholder3 = "AgACAgQAAxkBAAMLZFFEzEhkfH2kM-Gyx-5j8KrG5YgAAh27MRtskYlSKctsbQ4wl14ACAEAAwIAA3gABx4E" # assets/placeholder3.png
-        prompt = update.command[1]
+        prompt = update.command[1:]
         caption = f"ImageGenerator\nImage is generating, this is a placeholder image.\n\nUsing Prompt: {prompt}"
         try:
             msgs = await bot.send_media_group(chat_id, [
