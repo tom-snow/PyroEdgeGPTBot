@@ -50,7 +50,7 @@ _A telegram bot with Bing AI ( using [EdgeGPT](https://github.com/acheong08/Edge
 - Go to [`bing.com`](https://bing.com/)
 - Open the extension
 - Click "Export" on the bottom right, then "Export as JSON" (This saves your cookies to clipboard)
-- Paste your cookies into a file `cookies.json`
+- Paste your cookies into a file `./cookie.json` (The filename depends on your `.env` settings)
 
 </details>
 
