@@ -52,7 +52,7 @@ _在 Telegram 上使用 Bing AI ( 使用 [EdgeGPT](https://github.com/acheong08/
 - 前往 [`bing.com`](https://bing.com/)
 - 打开插件
 - 点击右下角 "Export", 然后点 "Export as JSON" (这将把 cookies 复制到剪贴板)
-- 将你的 cookies 粘贴到 `cookies.json`
+- 将你的 cookies 粘贴到 `./cookie.json` (文件名取决于你在 `.env` 中的设置)
 
 </details>
 
