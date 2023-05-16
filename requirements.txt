@@ -2,7 +2,7 @@
 
 python-dotenv>=1.0.0
 Pyrogram>=2.0
-EdgeGPT>=0.3.8
+EdgeGPT>=0.4.2
 tgcrypto
 aiohttp
 pytz

@@ -15,6 +15,7 @@ _在 Telegram 上使用 Bing AI ( 使用 [EdgeGPT](https://github.com/acheong08/
 - [ ] 支持 prompt
 - [x] 图片生成 (inline query 与命令模式)
 - [ ] 导出会话到 notion
+- [x] 热更新 EdgeGPT 依赖
 
 # 安装
 ## 依赖
@@ -99,6 +100,7 @@ switch - 切换聊天模式
 interval - 设置修改消息间隔
 suggest_mode - 建议消息模式
 image_gen - 图片生成
+update - 热更新 EdgeGPT 依赖
 ```
 
 </details>

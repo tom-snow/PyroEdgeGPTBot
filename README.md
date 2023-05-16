@@ -15,6 +15,7 @@ _A telegram bot with Bing AI ( using [EdgeGPT](https://github.com/acheong08/Edge
 - [ ] Prompt Support
 - [x] Image generation (inline query and command mode)
 - [ ] Export conversation to Notion
+- [x] Hot update the EdgeGPT dependence
 
 # Setup
 ## Requirements
@@ -95,6 +96,7 @@ switch - Switch the conversation style
 interval - Set edit interval
 suggest_mode - Set the suggest mode
 image_gen - Generate images
+update - Update the EdgeGPT dependence
 ```
 
 </details>

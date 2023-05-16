@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import re
+import sys, importlib
 import json
 import time
 import pytz
 import logging
 import asyncio
 import contextlib
+
+import EdgeGPT
 
 # import py3langid as langid
 from logging.handlers import TimedRotatingFileHandler
@@ -19,7 +22,6 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, \
     ReplyKeyboardRemove, InlineQueryResultPhoto, InlineQueryResultArticle, InputTextMessageContent, \
     InputMediaPhoto
-from EdgeGPT import Chatbot, ConversationStyle
 
 from config import API_ID, API_KEY, BOT_TOKEN, ALLOWED_USER_IDS, COOKIE_FILE, NOT_ALLOW_INFO, \
     BOT_NAME, SUGGEST_MODE, DEFAULT_CONVERSATION_STYLE_TYPE, RESPONSE_TYPE, STREAM_INTERVAL, \
@@ -78,7 +80,7 @@ logger = logging.getLogger()
 
 
 def check_conversation_style(style):
-    if style in ConversationStyle.__members__:
+    if style in EdgeGPT.ConversationStyle.__members__:
         return True
     return False
 
@@ -103,8 +105,8 @@ EDGES = {}
 tmpLoop = asyncio.get_event_loop()
 for user_id in ALLOWED_USER_IDS:
     EDGES[user_id] = {
-        "bot": tmpLoop.run_until_complete(Chatbot.create(cookie_path=COOKIE_FILE)), # 共用一个 cookie.json 文件
-        "style": ConversationStyle[DEFAULT_CONVERSATION_STYLE_TYPE],
+        "bot": tmpLoop.run_until_complete(EdgeGPT.Chatbot.create(cookie_path=COOKIE_FILE)), # 共用一个 cookie.json 文件
+        "style": EdgeGPT.ConversationStyle[DEFAULT_CONVERSATION_STYLE_TYPE],
         "response": RESPONSE_TYPE,
         "interval": STREAM_INTERVAL,
         "suggest": SUGGEST_MODE,
@@ -182,6 +184,50 @@ async def set_response_handle(bot, update):
         EDGES[update.chat.id]["response"] = "normal"
     reply_text = f"{BOT_NAME}: set RESPONSE_TYPE to '{EDGES[update.chat.id]['response']}'."
     await bot.send_message(chat_id=update.chat.id, text=reply_text)
+
+# 更新依赖
+@pyro.on_message(filters.command("update") & filters.private & filters.chat(ALLOWED_USER_IDS))
+async def set_update_handle(bot, update):
+    logger.info(f"Receive commands [{update.command}] from [{update.chat.id}]")
+    msg = await bot.send_message(chat_id=update.chat.id
+                                 , text=f"{BOT_NAME}: Updateing [EdgeGPT](https://github.com/acheong08/EdgeGPT)."
+                                 , disable_web_page_preview=True) 
+    # 关闭连接
+    for user_id in EDGES:
+        await EDGES[user_id]["bot"].close()
+    # 更新&重载依赖
+    python_path = sys.executable
+    executor = await asyncio.create_subprocess_shell(f"{python_path} -m pip install -U EdgeGPT"
+                                                     , stdout=asyncio.subprocess.PIPE
+                                                     , stderr=asyncio.subprocess.PIPE
+                                                     , stdin=asyncio.subprocess.PIPE)
+    stdout, stderr = await executor.communicate()
+    logger.info(f"[set_update_handle] stdout: {stdout.decode()}")
+    result = ""
+    old_version = ""
+    new_version = ""
+    for line in stdout.decode().split("\n"): # 解析日志
+        if "Successfully uninstalled EdgeGPT-" in line:
+            old_version = line.replace("Successfully uninstalled EdgeGPT-", "").strip()
+        if "Successfully installed EdgeGPT-" in line:
+            new_version = line.replace("Successfully installed EdgeGPT-", "").strip()
+    if old_version and new_version:
+        result = f"[EdgeGPT](https://github.com/acheong08/EdgeGPT): {old_version} -> {new_version}"
+    err = False
+    if "WARNING" not in stderr.decode():
+        err = True
+    if err:
+        logger.error(f"[set_update_handle] stderr: {stderr.decode()}")
+        result += stderr.decode()
+    else:
+        logger.warning(f"[set_update_handle] stderr: {stderr.decode()}")
+
+    importlib.reload(EdgeGPT)
+    # 重新连接
+    for user_id in EDGES:
+        EDGES[user_id]["bot"] = await EdgeGPT.Chatbot.create(cookie_path=COOKIE_FILE)
+        EDGES[user_id]["style"] = EdgeGPT.ConversationStyle[DEFAULT_CONVERSATION_STYLE_TYPE]
+    await msg.edit_text(f"{BOT_NAME}: Updated!\n\n{result}", disable_web_page_preview=True) 
 
 # 设置 stream 模式消息更新间隔
 @pyro.on_message(filters.command("interval") & filters.private & filters.chat(ALLOWED_USER_IDS))
