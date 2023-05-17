@@ -86,6 +86,8 @@ python PyroEdgeGptBot.py
 > Note that you can run `python base64_encode_cookie.py` locally then get `COOKIE_BASE64` value from `base64_encoded_cookie.txt`
 * Deploy!
 
+# Run it on Railway
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/7OO3yS?referralCode=_cP9IT)
 
 <details>
   <summary>
