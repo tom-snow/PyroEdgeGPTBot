@@ -18,6 +18,8 @@ ENV API_ID=YOUR_API_ID \
     LOG_LEVEL=WARNING \
     LOG_TIMEZONE=Asia/Shanghai
 
-RUN pip install -r requirements.txt
+RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev \
+    && pip install --no-cache-dir -r requirements.txt \
+    && apk del .build-deps
 
 CMD [ "python", "PyroEdgeGptBot.py" ]
