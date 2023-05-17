@@ -154,6 +154,10 @@ async def help_handle(bot, update):
     help_text += "/switch - Switch the conversation style.\n"
     help_text += "/interval - Set the stream mode message editing interval. (Unit: second)\n"
     help_text += "/suggest_mode - Set the suggest mode. Available arguments: `callbackquery`, `replykeyboard`, `copytext`\n"
+    help_text += "/update - Update the EdgeGPT and reload the bot.\n"
+    help_text += "/image_gen - Generate images using your custom prompt. Example: `/image_gen cute cats`\n"
+    help_text += "\nInline Query:\n"
+    help_text += "`@BOT_NAME g &lt;prompt> %`. Example: `@BOT_NAME g cats %`\n"
     await bot.send_message(chat_id=update.chat.id, text=help_text)
 
 # 新建/重置会话
@@ -264,27 +268,14 @@ async def set_suggest_mode_handle(bot, update):
     logger.info(f"Receive commands [{update.command}] from [{update.chat.id}]")
     if len(update.command) > 1:
         chat_id = update.chat.id
-        placeholder0 = "AgACAgQAAxkBAAMIZFFEWtUdu7y7O0W02C0dI7Q50xYAArS6MRuV0YFSDLuenqIQy8gACAEAAwIAA3gABx4E" # assets/placeholder0.png
-        placeholder1 = "AgACAgQAAxkBAAMJZFFEjKiGPDzKAqGm8jUGXXxXqWIAAhu7MRtskYlScm9aBotskTgACAEAAwIAA3gABx4E" # assets/placeholder1.png
-        placeholder2 = "AgACAgQAAxkBAAMKZFFEsD-xr4r89Jm10Dg-2GK6pdIAAhy7MRtskYlSeYXuodobO3YACAEAAwIAA3gABx4E" # assets/placeholder2.png
-        placeholder3 = "AgACAgQAAxkBAAMLZFFEzEhkfH2kM-Gyx-5j8KrG5YgAAh27MRtskYlSKctsbQ4wl14ACAEAAwIAA3gABx4E" # assets/placeholder3.png
-        prompt = update.command[1:]
+        prompt = " ".join(update.command[1:])
         caption = f"ImageGenerator\nImage is generating, this is a placeholder image.\n\nUsing Prompt: {prompt}"
-        try:
-            msgs = await bot.send_media_group(chat_id, [
-                InputMediaPhoto(placeholder0, caption=caption),
-                InputMediaPhoto(placeholder1, caption=caption),
-                InputMediaPhoto(placeholder2, caption=caption),
-                InputMediaPhoto(placeholder3, caption=caption)
-            ])
-        except Exception as e:
-            logger.warning(f"ImageGenerator Send Default Placeholder Image Warn: {e}")
-            msgs = await bot.send_media_group(chat_id, [
-                InputMediaPhoto("assets/placeholder0.png", caption=caption),
-                InputMediaPhoto("assets/placeholder1.png", caption=caption),
-                InputMediaPhoto("assets/placeholder2.png", caption=caption),
-                InputMediaPhoto("assets/placeholder3.png", caption=caption),
-            ])
+        msgs = await bot.send_media_group(chat_id, [
+            InputMediaPhoto("assets/placeholder0.png", caption=caption),
+            InputMediaPhoto("assets/placeholder1.png", caption=caption),
+            InputMediaPhoto("assets/placeholder2.png", caption=caption),
+            InputMediaPhoto("assets/placeholder3.png", caption=caption),
+        ])
 
         try:
             images = await image_gen_main(prompt)
@@ -297,7 +288,7 @@ async def set_suggest_mode_handle(bot, update):
                     await bot.edit_message_media(msg_chat_id, msg_id, InputMediaPhoto(images[i], caption=caption))
                 else:
                     await msgs[i].delete()
-            logger.info(f"ImageGenerator Successfully, chat_id: {chat_id}, images: {images}")
+            logger.info(f"ImageGenerator Successfully, chat_id: {chat_id}, images({images_count}): {images}")
             return
         except Exception as e:
             logger.error(f"ImageGenerator Error: {e}")
