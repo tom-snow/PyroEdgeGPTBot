@@ -77,6 +77,16 @@ export ALLOWED_USER_IDS='112113115,567568569'
 python PyroEdgeGptBot.py
 ```
 
+# Run it on Back4app
+* [Fork](https://github.com/tom-snow/PyroEdgeGPTBot/fork) this repo
+* Login into [Back4app](https://www.back4app.com/login) (Suggests login with github account)
+* Click `Build new app` and `Containers as a Service`
+* Link the repo you forked.
+* Set the [Required ENVS](./Dockerfile#L7-L11) (Explain [here](./.env.example#L4-L12))
+> Note that you can run `python base64_encode_cookie.py` locally then get `COOKIE_BASE64` value from `base64_encoded_cookie.txt`
+* Deploy!
+
+
 <details>
   <summary>
 

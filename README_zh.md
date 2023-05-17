@@ -80,6 +80,14 @@ export ALLOWED_USER_IDS='112113115,567568569'
 python PyroEdgeGptBot.py
 ```
 
+# 在 Back4app 上托管运行
+* [Fork](https://github.com/tom-snow/PyroEdgeGPTBot/fork) 本仓库
+* 登陆 [Back4app](https://www.back4app.com/login) (推荐使用 github 账号登陆)
+* 点击 `Build new app` 和 `Containers as a Service`
+* 授权你 fork 后的仓库.
+* 设置[必须环境变量](./Dockerfile#L7-L11) ([变量说明](./.env.example#L4-L12))
+> 你可以本地运行 `python base64_encode_cookie.py` 然后从输出的 `base64_encoded_cookie.txt` 文件中取得 `COOKIE_BASE64` 的值 
+* 部署!
 
 <details>
   <summary>
