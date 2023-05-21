@@ -45,7 +45,8 @@ _在 Telegram 上使用 Bing AI ( 使用 [EdgeGPT](https://github.com/acheong08/
 <details>
   <summary>
 
-### 获取 cookie (必须)
+### 获取 cookie (可选)
+PS: 如果需要使用图像生成此项必须设置, 设置后也可以使用更多更长的 AI 对话
 
   </summary>
 
@@ -88,6 +89,9 @@ python PyroEdgeGptBot.py
 * 设置[必须环境变量](./Dockerfile#L7-L11) ([变量说明](./.env.example#L4-L12))
 > 你可以本地运行 `python base64_encode_cookie.py` 然后从输出的 `base64_encoded_cookie.txt` 文件中取得 `COOKIE_BASE64` 的值 
 * 部署!
+
+# 在 Railway 托管运行
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/7OO3yS?referralCode=_cP9IT)
 
 <details>
   <summary>

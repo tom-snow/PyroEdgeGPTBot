@@ -33,11 +33,12 @@ RESPONSE_TEMPLATE = """{msg_main}
 {msg_throttling}
 """
 
+BING_COOKIE = None
 IMAGE_GEN_COOKIE_U = ""
-with contextlib.suppress(Exception):
-    with open(COOKIE_FILE, encoding="utf-8") as file:
-        cookie_json = json.load(file)
-        for cookie in cookie_json:
+with contextlib.suppress(Exception): # 如果文件不存在，则 BING_COOKIE 为 None
+    with open(COOKIE_FILE, 'r', encoding="utf-8") as file:
+        BING_COOKIE = json.load(file)
+        for cookie in BING_COOKIE:
             if cookie.get("name") == "_U":
                 IMAGE_GEN_COOKIE_U = cookie.get("value")
                 break
@@ -105,7 +106,7 @@ EDGES = {}
 tmpLoop = asyncio.get_event_loop()
 for user_id in ALLOWED_USER_IDS:
     EDGES[user_id] = {
-        "bot": tmpLoop.run_until_complete(EdgeGPT.Chatbot.create(cookie_path=COOKIE_FILE)), # 共用一个 cookie.json 文件
+        "bot": tmpLoop.run_until_complete(EdgeGPT.Chatbot.create(cookies=BING_COOKIE)), # 共用一个 cookie.json 文件
         "style": EdgeGPT.ConversationStyle[DEFAULT_CONVERSATION_STYLE_TYPE],
         "response": RESPONSE_TYPE,
         "interval": STREAM_INTERVAL,
@@ -201,22 +202,41 @@ async def set_update_handle(bot, update):
         await EDGES[user_id]["bot"].close()
     # 更新&重载依赖
     python_path = sys.executable
-    executor = await asyncio.create_subprocess_shell(f"{python_path} -m pip install -U EdgeGPT"
+    executor = await asyncio.create_subprocess_shell(f"{python_path} -m pip install -U EdgeGPT BingImageCreator"
                                                      , stdout=asyncio.subprocess.PIPE
                                                      , stderr=asyncio.subprocess.PIPE
                                                      , stdin=asyncio.subprocess.PIPE)
     stdout, stderr = await executor.communicate()
     logger.info(f"[set_update_handle] stdout: {stdout.decode()}")
     result = ""
-    old_version = ""
-    new_version = ""
+    edgegpt_old_version = ""
+    edgegpt_new_version = ""
+    image_old_version = ""
+    image_new_version = ""
     for line in stdout.decode().split("\n"): # 解析日志
+        # pkg_resources.get_distribution("BingImageCreator").version
         if "Successfully uninstalled EdgeGPT-" in line:
-            old_version = line.replace("Successfully uninstalled EdgeGPT-", "").strip()
-        if "Successfully installed EdgeGPT-" in line:
-            new_version = line.replace("Successfully installed EdgeGPT-", "").strip()
-    if old_version and new_version:
-        result = f"[EdgeGPT](https://github.com/acheong08/EdgeGPT): {old_version} -> {new_version}"
+            edgegpt_old_version = line.replace("Successfully uninstalled EdgeGPT-", "").strip()
+        if "Successfully uninstalled BingImageCreator-" in line:
+            image_old_version = line.replace("Successfully uninstalled BingImageCreator-", "").strip()
+        if "Successfully installed" in line:
+            import re
+            try:
+                edgegpt_new_version = re.findall(r"(?<=EdgeGPT-)(\d+\.\d+\.\d+)", line)[0]
+            except:
+                pass
+            try:
+                image_new_version = re.findall(r"(?<=BingImageCreator-)(\d+\.\d+\.\d+)", line)[0]
+            except:
+                pass
+    if edgegpt_old_version and edgegpt_new_version:
+        result += f"[EdgeGPT](https://github.com/acheong08/EdgeGPT): {edgegpt_old_version} -> {edgegpt_new_version}"
+    else:
+        result += f"[EdgeGPT](https://github.com/acheong08/EdgeGPT): already the newest version."
+    if image_old_version and image_new_version:
+        result += f"[BingImageCreator](https://github.com/acheong08/BingImageCreator): {image_old_version} -> {image_new_version}"
+    else:
+        result += f"[BingImageCreator](https://github.com/acheong08/BingImageCreator): already the newest version."
     err = False
     if "WARNING" not in stderr.decode():
         err = True
@@ -229,7 +249,7 @@ async def set_update_handle(bot, update):
     importlib.reload(EdgeGPT)
     # 重新连接
     for user_id in EDGES:
-        EDGES[user_id]["bot"] = await EdgeGPT.Chatbot.create(cookie_path=COOKIE_FILE)
+        EDGES[user_id]["bot"] = await EdgeGPT.Chatbot.create(cookies=BING_COOKIE)
         EDGES[user_id]["style"] = EdgeGPT.ConversationStyle[DEFAULT_CONVERSATION_STYLE_TYPE]
     await msg.edit_text(f"{BOT_NAME}: Updated!\n\n{result}", disable_web_page_preview=True) 
 
@@ -260,6 +280,7 @@ async def set_suggest_mode_handle(bot, update):
 
 def can_image_gen():
     async def funcc(_, __, update):
+        global IMAGE_GEN_COOKIE_U
         return IMAGE_GEN_COOKIE_U != ""
     return filters.create(funcc)
 # 图片生成
@@ -356,6 +377,7 @@ async def callback_query_handle(bot, query):
 def is_image_gen_query_filter():
     async def funcg(_, __, update):
         if update.query.startswith("g"):
+            global IMAGE_GEN_COOKIE_U
             return IMAGE_GEN_COOKIE_U != ""
         return False
     return filters.create(funcg)

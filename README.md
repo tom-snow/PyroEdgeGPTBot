@@ -43,7 +43,8 @@ _A telegram bot with Bing AI ( using [EdgeGPT](https://github.com/acheong08/Edge
 <details>
   <summary>
 
-### Getting authentication (Required)
+### Getting authentication (Optional)
+PS: This column is needed by image creator, or ask more questions and have longer conversations
 
   </summary>
 

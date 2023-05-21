@@ -2,7 +2,8 @@
 
 python-dotenv>=1.0.0
 Pyrogram>=2.0
-EdgeGPT>=0.4.2
+EdgeGPT>=0.6.2
+BingImageCreator>=0.2.1
 tgcrypto
 aiohttp
 pytz

@@ -25,11 +25,10 @@ LOG_TIMEZONE = env.get('LOG_TIMEZONE') or os.environ.get('LOG_TIMEZONE') or "Asi
 
 if not os.path.exists(COOKIE_FILE):
     COOKIE_BASE64 = os.environ.get('COOKIE_BASE64', "")
-    if COOKIE_BASE64 == "":
-        raise FileNotFoundError(f"Cookie file not found: {COOKIE_FILE}")
-    with open(COOKIE_FILE, "w", encoding="utf-8") as file:
-        COOKIE = base64.b64decode(COOKIE_BASE64).decode("utf-8")
-        file.write(COOKIE)
-        print("\n")
-        print(COOKIE)
-        print(f"\n\nCookie file saved: {COOKIE_FILE}")
+    if COOKIE_BASE64 != "":
+        with open(COOKIE_FILE, "w", encoding="utf-8") as file:
+            COOKIE = base64.b64decode(COOKIE_BASE64).decode("utf-8")
+            file.write(COOKIE)
+            print("\n")
+            print(COOKIE)
+            print(f"\n\nCookie file saved: {COOKIE_FILE}")
