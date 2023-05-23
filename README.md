@@ -12,6 +12,9 @@ _A telegram bot with Bing AI ( using [EdgeGPT](https://github.com/acheong08/Edge
 - [x] Multiple users with different sessions (No group support now)
 - [x] Response with reference (and correct ref label)
 - [x] Response with normal and stream mode
+- [x] Can allow every one to use
+- [x] Allow you set your own cookie at runtime
+- [x] Allow you set a bot name to you
 - [ ] Prompt Support
 - [x] Image generation (inline query and command mode)
 - [ ] Export conversation to Notion
@@ -29,6 +32,7 @@ _A telegram bot with Bing AI ( using [EdgeGPT](https://github.com/acheong08/Edge
   <summary>
 
 ### Checking bing AI access (Required)
+PS: Everyone can access Bing AI for chat now, even anonymous users.
 
   </summary>
 
@@ -87,7 +91,7 @@ python PyroEdgeGptBot.py
 > Note that you can run `python base64_encode_cookie.py` locally then get `COOKIE_BASE64` value from `base64_encoded_cookie.txt`
 * Deploy!
 
-# Run it on Railway
+# Run it on Railway (Recommend)
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/7OO3yS?referralCode=_cP9IT)
 
 <details>
@@ -110,6 +114,8 @@ interval - Set edit interval
 suggest_mode - Set the suggest mode
 image_gen - Generate images
 update - Update the EdgeGPT dependence
+cookie - Set you own cookie
+bot_name - Set the bot name display to you
 ```
 
 </details>

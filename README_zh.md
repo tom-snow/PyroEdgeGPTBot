@@ -12,6 +12,9 @@ _在 Telegram 上使用 Bing AI ( 使用 [EdgeGPT](https://github.com/acheong08/
 - [x] 多用户独享会话 (暂时不支持群内使用)
 - [x] 回复内容包含引用标号
 - [x] 以常规模式或者流模式回复
+- [x] 可以允许任何人使用
+- [x] 在运行时设置个人 cookie
+- [x] 为每人设置个性的机器人名称
 - [ ] 支持 prompt
 - [x] 图片生成 (inline query 与命令模式)
 - [ ] 导出会话到 notion
@@ -30,7 +33,7 @@ _在 Telegram 上使用 Bing AI ( 使用 [EdgeGPT](https://github.com/acheong08/
   <summary>
 
 ### 检查 bing AI 资格 (必须)
-
+PS: 当前所有人都能使用 Bing AI 聊天，甚至没有登陆的匿名用户
   </summary>
 
 - 安装最新版本 Microsoft Edge
@@ -90,7 +93,7 @@ python PyroEdgeGptBot.py
 > 你可以本地运行 `python base64_encode_cookie.py` 然后从输出的 `base64_encoded_cookie.txt` 文件中取得 `COOKIE_BASE64` 的值 
 * 部署!
 
-# 在 Railway 托管运行
+# 在 Railway 托管运行(推荐)
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/7OO3yS?referralCode=_cP9IT)
 
 <details>
@@ -113,6 +116,8 @@ interval - 设置修改消息间隔
 suggest_mode - 建议消息模式
 image_gen - 图片生成
 update - 热更新 EdgeGPT 依赖
+cookie - 设置你自己的 cookie
+bot_name - 设置机器人展示名
 ```
 
 </details>
