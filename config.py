@@ -16,7 +16,10 @@ API_ID = env.get('API_ID') or os.environ.get('API_ID')
 API_KEY = env.get('API_KEY') or os.environ.get('API_KEY')
 BOT_TOKEN = env.get('BOT_TOKEN') or os.environ.get('BOT_TOKEN')
 ALLOWED_USER_IDS = env.get('ALLOWED_USER_IDS') or os.environ.get('ALLOWED_USER_IDS') or "*"
-ALLOWED_USER_IDS = [ int(uid.strip()) for uid in ALLOWED_USER_IDS.split(",") ] if ALLOWED_USER_IDS != "*" else None
+try:
+    ALLOWED_USER_IDS = [ int(uid.strip()) for uid in ALLOWED_USER_IDS.split(",") ] if ALLOWED_USER_IDS != "*" else None
+except:
+    ALLOWED_USER_IDS = None
 SUPER_USER_IDS = env.get('SUPER_USER_IDS') or os.environ.get('SUPER_USER_IDS') or ""
 SUPER_USER_IDS = [ int(uid.strip()) for uid in SUPER_USER_IDS.split(",") ] if SUPER_USER_IDS != "" else None
 COOKIE_FILE = env.get('COOKIE_FILE') or os.environ.get('COOKIE_FILE') or "./cookie.json"

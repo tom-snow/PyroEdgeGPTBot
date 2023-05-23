@@ -206,8 +206,8 @@ async def help_handle(bot, update):
     help_text += "/update - Update the EdgeGPT and reload the bot.\n"
     help_text += "/image_gen - Generate images using your custom prompt. Example: `/image_gen cute cats`\n"
     help_text += "\nInline Query:\n"
-    help_text += "`@@PyroEdgeGptBot g &lt;prompt> %`. Example: `@@PyroEdgeGptBot g cats %`\nGenerate images using your prompt 'cats'.\n"
-    help_text += "\n\nPS: You should set your own cookie before using image generator\n"
+    help_text += "`@PyroEdgeGptBot g &lt;prompt> %`. Example: `@PyroEdgeGptBot g cats %`\nGenerate images using your prompt 'cats'.\n"
+    help_text += "\n\nPS: You should set your own cookie before using image generator. Otherwise, the image generator will not response.\n"
     await bot.send_message(chat_id=update.chat.id, text=help_text)
 
 # 新建/重置会话

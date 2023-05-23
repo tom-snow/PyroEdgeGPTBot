@@ -7,8 +7,9 @@ COPY . /PyroEdgeGptBot
 ENV API_ID=YOUR_API_ID \
     API_KEY=YOUR_API_HASH \
     BOT_TOKEN=YOUR_BOT_TOKEN \
-    ALLOWED_USER_IDS=USER_IDS \
-    COOKIE_BASE64=BASE64_ENCODED_COOKIE \
+    ALLOWED_USER_IDS="*" \
+    SUPER_USER_IDS=112113115,567568569 \
+    COOKIE_BASE64="" \ 
     NOT_ALLOW_INFO="⚠️You(%user_id%) are not authorized to use this bot⚠️" \
     BOT_NAME="PyroEdgeGpt" \
     SUGGEST_MODE=callbackquery \
