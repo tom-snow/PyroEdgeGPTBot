@@ -172,7 +172,10 @@ async def start_handle(bot, update):
         not_allow_info = not_allow_info.replace("%user_id%", str(update.chat.id))
         await bot.send_message(chat_id=update.chat.id, text=not_allow_info, reply_markup=keyboard)
         return
-    bot_name = EDGES[update.chat.id]["bot_name"]
+    if not check_inited(update.chat.id):
+        bot_name = BOT_NAME
+    else:
+        bot_name = EDGES[update.chat.id]["bot_name"]
     welcome_info = f"Hello, I'm {bot_name}. I'm a telegram bot of Bing AI.\nYou can send /help for more information.\n\n"
     if ALLOWED_USER_IDS is None and not check_inited(update.chat.id):
         logger.info(f"User [{update.chat.id}] not inited")
@@ -185,7 +188,10 @@ async def start_handle(bot, update):
 async def help_handle(bot, update):
     logger.info(f"Receive commands [{update.command}] from [{update.chat.id}]")
     # 帮助信息字符串
-    bot_name = EDGES[update.chat.id]["bot_name"]
+    if not check_inited(update.chat.id):
+        bot_name = BOT_NAME
+    else:
+        bot_name = EDGES[update.chat.id]["bot_name"]
     help_text = f"Hello, I'm {bot_name}, a telegram bot of Bing AI\n"
     help_text += "\nAvailable commands:\n"
     help_text += "/start - Start the bot and show welcome message\n"
@@ -208,10 +214,9 @@ async def help_handle(bot, update):
 @pyro.on_message(filters.command(["new", "reset"]) & filters.private & is_allowed_filter())
 async def reset_handle(bot, update):
     logger.info(f"Receive commands [{update.command}] from [{update.chat.id}]")
-    bot_name = EDGES[update.chat.id]["bot_name"]
-    reply_text = f"{bot_name} has been reset."
     if not check_inited(update.chat.id):
         EDGES[update.chat.id] = copy.deepcopy(USER_TEMPLATE)
+        bot_name = BOT_NAME
         try:
             global BING_COOKIE
             EDGES[update.chat.id]["bot"] = await EdgeGPT.Chatbot.create(cookies=BING_COOKIE)
@@ -224,7 +229,8 @@ async def reset_handle(bot, update):
             reply_text = f"{bot_name}: Failed to initialize.({e})"
             await update.reply(reply_text)
             return
-
+    bot_name = EDGES[update.chat.id]["bot_name"]
+    reply_text = f"{bot_name} has been reset."
     if len(update.command) > 1:
         arg = update.command[1]
         if check_conversation_style(arg):
