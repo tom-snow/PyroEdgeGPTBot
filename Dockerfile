@@ -19,8 +19,9 @@ ENV API_ID=YOUR_API_ID \
     LOG_LEVEL=WARNING \
     LOG_TIMEZONE=Asia/Shanghai
 
-RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev \
+RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev git \
     && pip install --no-cache-dir -r requirements.txt \
+    && pip install -U git+https://github.com/tom-snow/EdgeGPT.git \
     && apk del .build-deps
 
 CMD [ "python", "PyroEdgeGptBot.py" ]

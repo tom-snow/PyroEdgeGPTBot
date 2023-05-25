@@ -306,13 +306,13 @@ async def set_update_handle(bot, update):
             except:
                 logger.exception(f"Warn: Failed to parse BingImageCreator new version: {line}")
     if edgegpt_old_version and edgegpt_new_version:
-        result += f"[EdgeGPT](https://github.com/acheong08/EdgeGPT): {edgegpt_old_version} -> {edgegpt_new_version}"
+        result += f"[EdgeGPT](https://github.com/acheong08/EdgeGPT): {edgegpt_old_version} -> {edgegpt_new_version}\n"
     else:
-        result += f"[EdgeGPT](https://github.com/acheong08/EdgeGPT): already the newest version."
+        result += f"[EdgeGPT](https://github.com/acheong08/EdgeGPT): already the newest version.\n"
     if image_old_version and image_new_version:
-        result += f"[BingImageCreator](https://github.com/acheong08/BingImageCreator): {image_old_version} -> {image_new_version}"
+        result += f"[BingImageCreator](https://github.com/acheong08/BingImageCreator): {image_old_version} -> {image_new_version}\n"
     else:
-        result += f"[BingImageCreator](https://github.com/acheong08/BingImageCreator): already the newest version."
+        result += f"[BingImageCreator](https://github.com/acheong08/BingImageCreator): already the newest version.\n"
     err = False
     if "WARNING" not in stderr.decode():
         err = True
