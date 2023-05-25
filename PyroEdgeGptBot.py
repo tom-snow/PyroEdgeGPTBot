@@ -142,9 +142,9 @@ else:
 def is_allowed_filter():
     async def func(_, __, update):
         if ALLOWED_USER_IDS is not None:
-            if update.__contains__("from_user"):
+            if hasattr(update, "from_user"):
                 return int(update.from_user.id) in ALLOWED_USER_IDS
-            if update.__contains__("chat"):
+            if hasattr(update, "chat"):
                 return int(update.chat.id) in ALLOWED_USER_IDS
             return False
         return True
@@ -241,6 +241,7 @@ async def reset_handle(bot, update):
             await bot.send_message(chat_id=update.chat.id, text="Available arguments: `creative`, `balanced`, `precise`")
             return
     edge = EDGES[update.chat.id]["bot"]
+    logger.info(f"Reset EdgeGPT for user [{update.chat.id}]")
     await edge.reset()
     await update.reply(reply_text)
 
@@ -820,11 +821,11 @@ async def bingAIStream(user_id, messageText):
             logger.info(f"BingAI stream response: {rsp}")
             try:
                 response = re.sub(r'\[\^(\d+)\^\]', '', rsp)
+                if response.startswith("[1]: "): # 删除引用的消息链接, 避免消息闪动幅度过大
+                    response = response.split("\n\n", 1)[1]
             except:
                 logger.exception(f"[BingAIStream] regex error for: {rsp}")
                 response = rsp
-            if response.startswith("[1]: "): # 删除引用的消息链接, 避免消息闪动幅度过大
-                response = response.split("\n\n", 1)[1]
             yield final, response, ""
 
 def process_message_main(rsp_obj, user_id=None):
