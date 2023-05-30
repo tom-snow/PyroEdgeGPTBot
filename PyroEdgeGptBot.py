@@ -110,7 +110,7 @@ if ALLOWED_USER_IDS != None:
 else:
     logger.warning("Allow everyone mode")
     if BING_COOKIE is not None:
-        logger.warning("You set BING_COOKIE to None, but you allowed everyone to use this bot")
+        logger.warning("You set BING_COOKIE to not None, but you allowed everyone to use this bot")
     USER_TEMPLATE = {
         "bot": {}, # 共用一个 cookie.json 文件
         "style": EdgeGPT.ConversationStyle[DEFAULT_CONVERSATION_STYLE_TYPE],
