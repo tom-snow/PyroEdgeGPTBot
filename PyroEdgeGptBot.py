@@ -4,6 +4,7 @@ import re
 import sys, importlib
 import json, copy
 import time
+from typing import Dict, List
 import pytz
 import logging
 import asyncio
@@ -496,7 +497,8 @@ async def set_suggest_mode_handle(bot, update):
 
         try:
             image_gen_cookie_u = EDGES[chat_id]["image_U"]
-            images = await image_gen_main(prompt,image_gen_cookie_u)
+            all_cookies = EDGES[update.from_user.id]["cookies"]
+            images = await image_gen_main(prompt, image_gen_cookie_u, all_cookies=all_cookies)
             caption = f"ImageGenerator\nImage is generated.\n\nUsing Prompt: {prompt}"
             images_count = len(images)
             for i in range(len(msgs)):
@@ -552,7 +554,7 @@ async def chat_handle(bot, update):
         except Exception as e:
             logger.error(f"There seems an error at upsteam library, update the upsteam may help.")
             logger.exception(f"[chat_handle, unexpected error]: {e}")
-            await msg.edit(text="Something went wrong, please check the logs.")
+            await msg.edit(text=f"Something went wrong, please check the logs.\n\n[{e}]")
             raise e
 
 # 处理 callback query
@@ -587,7 +589,7 @@ async def callback_query_handle(bot, query):
         except Exception as e:
             logger.error("There seems an error at upsteam library, update the upsteam may help.")
             logger.exception(f"[callback_query_handle, unexpected error]: {e}")
-            await msg.edit(text="Something went wrong, please check the logs.")
+            await msg.edit(text=f"Something went wrong, please check the logs.\n\n[{e}]")
             raise e
 
 def is_image_gen_query_filter():
@@ -669,7 +671,8 @@ async def inline_query_image_gen_handle(bot, update):
             images = EDGES[update.from_user.id]["images"].get(prompt_hash)
         else:
             image_gen_cookie_u = EDGES[update.from_user.id]["image_U"]
-            images = await image_gen_main(prompt, image_gen_cookie_u) # 获取图片并缓存
+            all_cookies = EDGES[update.from_user.id]["cookies"]
+            images = await image_gen_main(prompt, image_gen_cookie_u, all_cookies=all_cookies) # 获取图片并缓存
             EDGES[update.from_user.id]["images"] = {}
             EDGES[update.from_user.id]["images"][prompt_hash] = images
 
@@ -816,16 +819,17 @@ async def bingAIStream(user_id, messageText):
             response, msg_suggest = process_message_main(rsp, user_id)
             yield final, response, msg_suggest
 
-        if now_time - last_time > EDGES[user_id]["interval"]:
+        if now_time - last_time > EDGES[user_id]["interval"] and not final:
             last_time = now_time
             logger.info(f"BingAI stream response: {rsp}")
-            try:
+            if type(rsp) == str:
+                rsp = rsp.strip()
                 response = re.sub(r'\[\^(\d+)\^\]', '', rsp)
                 if response.startswith("[1]: "): # 删除引用的消息链接, 避免消息闪动幅度过大
                     response = response.split("\n\n", 1)[1]
-            except:
-                logger.exception(f"[BingAIStream] regex error for: {rsp}")
-                response = rsp
+            else:
+                response = "[WARN] BingAI stream response: Returned non-string type data without final"
+                logger.warning(f"BingAI stream response: Returned non-string type data without final")
             yield final, response, ""
 
 def process_message_main(rsp_obj, user_id=None):
@@ -916,10 +920,16 @@ def process_message_body(msg_obj, user_id=None):
 
     return msg_main, msg_ref, msg_suggest
 
-async def image_gen_main(prompt, image_gen_cookie_u):
-    async with ImageGenAsync(image_gen_cookie_u) as image_generator:
-        images = await image_generator.get_images(prompt)
-        return images
+async def image_gen_main(prompt, image_gen_cookie_u, all_cookies: List[Dict] = None):
+    if all_cookies is None:
+        async with ImageGenAsync(image_gen_cookie_u) as image_generator:
+            images = await image_generator.get_images(prompt)
+            return images
+    else:
+        async with ImageGenAsync(image_gen_cookie_u, all_cookies=all_cookies) as image_generator:
+            images = await image_generator.get_images(prompt)
+            return images
+
 
 
 pyro.run()
