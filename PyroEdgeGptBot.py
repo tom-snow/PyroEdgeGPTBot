@@ -10,7 +10,7 @@ import logging
 import asyncio
 import contextlib
 
-import EdgeGPT
+import EdgeGPT.EdgeGPT as EdgeGPT
 
 # import py3langid as langid
 from logging.handlers import TimedRotatingFileHandler
@@ -824,9 +824,18 @@ async def bingAIStream(user_id, messageText):
             logger.info(f"BingAI stream response: {rsp}")
             if type(rsp) == str:
                 rsp = rsp.strip()
+                if "Searching the web for:" in rsp:
+                    if "Generating answers for you..." in rsp:
+                        search_rsp = rsp.split("Generating answers for you...", 1)
+                        rsp = ""
+                        for line in search_rsp[0].split("\n"):
+                            if "Searching the web for:" in line:
+                                rsp += line + "\n"
+                        if search_rsp[1].strip().startswith("[1]: "): # 删除引用的消息链接, 避免消息闪动幅度过大
+                            search_rsp[1] = search_rsp[1].split("\n\n", 1)[1]
+                        rsp += "\nGenerating answers for you...\n" + search_rsp[1]
                 response = re.sub(r'\[\^(\d+)\^\]', '', rsp)
-                if response.startswith("[1]: "): # 删除引用的消息链接, 避免消息闪动幅度过大
-                    response = response.split("\n\n", 1)[1]
+                
             else:
                 response = "[WARN] BingAI stream response: Returned non-string type data without final"
                 logger.warning(f"BingAI stream response: Returned non-string type data without final")
@@ -837,8 +846,15 @@ def process_message_main(rsp_obj, user_id=None):
 
     # 回复消息主文本部分
     if "messages" in rsp_obj["item"]:
-        bot_message = rsp_obj["item"]["messages"][1]
-        msg_main, msg_ref, msg_suggest = process_message_body(bot_message, user_id)
+        bot_messages = rsp_obj["item"]["messages"]
+        search_query = ""
+        for message in bot_messages:
+            if "messageType" in message:
+                if message["messageType"] == "InternalSearchQuery":
+                    search_query += "#" + message["hiddenText"].replace(" ", "_") + "\n"
+            if "sourceAttributions" in message or "suggestedResponses" in message or "spokenText" in message :
+                msg_main_body, msg_ref, msg_suggest = process_message_body(message, user_id)
+        msg_main = msg_main_body + "\n\nSearch Query:\n" + search_query
     elif "result" in rsp_obj["item"]:
         logger.warning(f"[process_message_main] BingAI result: {json.dumps(rsp_obj['item']['result'], ensure_ascii=False)}")
         if rsp_obj["item"]["result"]["value"] == "InvalidSession":
