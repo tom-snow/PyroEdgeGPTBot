@@ -25,6 +25,8 @@ SUPER_USER_IDS = env.get('SUPER_USER_IDS') or os.environ.get('SUPER_USER_IDS') o
 SUPER_USER_IDS = [ int(uid.strip()) for uid in SUPER_USER_IDS.split(",") ] if SUPER_USER_IDS != "" else None
 COOKIE_FILE = env.get('COOKIE_FILE') or os.environ.get('COOKIE_FILE') or "./cookie.json"
 
+PROXY_BING = env.get('PROXY_BING') or os.environ.get('PROXY_BING') or ""
+PROXY_BING = PROXY_BING if PROXY_BING != "" else None
 NOT_ALLOW_INFO = env.get('NOT_ALLOW_INFO') or os.environ.get('NOT_ALLOW_INFO') or ""
 BOT_NAME = env.get('BOT_NAME') or os.environ.get('BOT_NAME') or "PyroEdgeGptBot"
 SUGGEST_MODE = env.get('SUGGEST_MODE') or os.environ.get('SUGGEST_MODE') or "callbackquery"

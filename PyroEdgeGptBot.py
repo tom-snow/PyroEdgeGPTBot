@@ -25,8 +25,8 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyb
     ReplyKeyboardRemove, InlineQueryResultPhoto, InlineQueryResultArticle, InputTextMessageContent, \
     InputMediaPhoto
 
-from config import BAD_CONFIG_ERROR, API_ID, API_KEY, BOT_TOKEN, ALLOWED_USER_IDS, SUPER_USER_IDS, COOKIE_FILE, NOT_ALLOW_INFO, \
-    BOT_NAME, SUGGEST_MODE, DEFAULT_CONVERSATION_STYLE_TYPE, RESPONSE_TYPE, STREAM_INTERVAL, \
+from config import BAD_CONFIG_ERROR, API_ID, API_KEY, BOT_TOKEN, ALLOWED_USER_IDS, SUPER_USER_IDS, COOKIE_FILE, \
+    PROXY_BING, NOT_ALLOW_INFO, BOT_NAME, SUGGEST_MODE, DEFAULT_CONVERSATION_STYLE_TYPE, RESPONSE_TYPE, STREAM_INTERVAL, \
     LOG_LEVEL, LOG_TIMEZONE
 
 RESPONSE_TEMPLATE = """{msg_main}
@@ -97,7 +97,7 @@ if ALLOWED_USER_IDS != None:
     tmpLoop = asyncio.get_event_loop()
     for user_id in ALLOWED_USER_IDS:
         EDGES[user_id] = {
-            "bot": tmpLoop.run_until_complete(EdgeGPT.Chatbot.create(cookies=BING_COOKIE)), # 共用一个 cookie.json 文件
+            "bot": tmpLoop.run_until_complete(EdgeGPT.Chatbot.create(proxy=PROXY_BING, cookies=BING_COOKIE)), # 共用一个 cookie.json 文件
             "style": EdgeGPT.ConversationStyle[DEFAULT_CONVERSATION_STYLE_TYPE],
             "response": RESPONSE_TYPE,
             "interval": STREAM_INTERVAL,
@@ -127,7 +127,7 @@ else:
     tmpLoop = asyncio.get_event_loop()
     for user_id in SUPER_USER_IDS:
         EDGES[user_id] = {
-            "bot": tmpLoop.run_until_complete(EdgeGPT.Chatbot.create(cookies=BING_COOKIE)), # 共用一个 cookie.json 文件
+            "bot": tmpLoop.run_until_complete(EdgeGPT.Chatbot.create(proxy=PROXY_BING, cookies=BING_COOKIE)), # 共用一个 cookie.json 文件
             "style": EdgeGPT.ConversationStyle[DEFAULT_CONVERSATION_STYLE_TYPE],
             "response": RESPONSE_TYPE,
             "interval": STREAM_INTERVAL,
@@ -220,7 +220,7 @@ async def reset_handle(bot, update):
         bot_name = BOT_NAME
         try:
             global BING_COOKIE
-            EDGES[update.chat.id]["bot"] = await EdgeGPT.Chatbot.create(cookies=BING_COOKIE)
+            EDGES[update.chat.id]["bot"] = await EdgeGPT.Chatbot.create(proxy=PROXY_BING, cookies=BING_COOKIE)
             reply_text = f"{bot_name}: Initialized scussessfully."
             await update.reply(reply_text)
             return
@@ -327,7 +327,7 @@ async def set_update_handle(bot, update):
     # 重新连接
     for user_id in EDGES:
         cookie = EDGES[user_id]["cookies"] or BING_COOKIE
-        EDGES[user_id]["bot"] = await EdgeGPT.Chatbot.create(cookies=cookie)
+        EDGES[user_id]["bot"] = await EdgeGPT.Chatbot.create(proxy=PROXY_BING, cookies=cookie)
         EDGES[user_id]["style"] = EdgeGPT.ConversationStyle[DEFAULT_CONVERSATION_STYLE_TYPE]
     bot_name = EDGES[update.chat.id]["bot_name"]
     await msg.edit_text(f"{bot_name}: Updated!\n\n{result}", disable_web_page_preview=True) 
@@ -407,7 +407,7 @@ async def cookie_file_handle(bot, update):
         if cookie.get("name") == "_U":
             EDGES[update.chat.id]["image_U"] = cookie.get("value")
             break
-    EDGES[update.chat.id]["bot"] = await EdgeGPT.Chatbot.create(cookies=cookies)
+    EDGES[update.chat.id]["bot"] = await EdgeGPT.Chatbot.create(proxy=PROXY_BING, cookies=cookies)
     FILE_HANDLE_USERS[update.chat.id] = False
     bot_name = EDGES[update.chat.id]["bot_name"]
     await bot.send_message(chat_id=update.chat.id, text=f"{bot_name}: Cookie set successfully.")
