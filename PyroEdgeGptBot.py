@@ -81,7 +81,7 @@ if not check_conversation_style(DEFAULT_CONVERSATION_STYLE_TYPE):
     raise BAD_CONFIG_ERROR(f"DEFAULT_CONVERSATION_STYLE_TYPE is invalid")
 
 # 使用 BOT_TOKEN 登陆 tg 机器人
-pyro = Client("PyroEdgeGpt", api_id=API_ID, api_hash=API_KEY, bot_token=BOT_TOKEN)
+pyro = Client("PyroEdgeGpt", api_id=int(API_ID), api_hash=API_KEY, bot_token=BOT_TOKEN)
 
 BING_COOKIE = None
 with contextlib.suppress(Exception): # 如果文件不存在，则 BING_COOKIE 为 None
